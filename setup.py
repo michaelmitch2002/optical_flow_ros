@@ -2,7 +2,7 @@ import os
 from glob import glob
 from setuptools import setup
 
-package_name = 'optical_flow_ros'
+package_name = 'optical_flow'
 
 setup(
     name=package_name,
