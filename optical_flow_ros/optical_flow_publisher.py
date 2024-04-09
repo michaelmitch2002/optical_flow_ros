@@ -25,7 +25,9 @@ from std_msgs.msg import Header
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import PoseWithCovariance, TwistWithCovariance, Pose, Twist, Point, Quaternion, Vector3, TransformStamped, Transform
 from pmw3901 import PMW3901, PAA5100, BG_CS_FRONT_BCM, BG_CS_BACK_BCM
+import serial
 
+ser = serial.Serial('/dev/ttyACM0',9600)
 # hard-coded values for PAA5100 and PMW3901 (to be verified for PMW3901)
 FOV_DEG = 42.0
 RES_PIX = 35
@@ -67,12 +69,39 @@ class OpticalFlowPublisher(Node):
         self.get_logger().info('Initialized')
 
     def publish_odom(self):
-        if self._odom_pub is not None and self._odom_pub.is_activated:
-            try:
-                dx, dy = self._sensor.get_motion(timeout=self.get_parameter('sensor_timeout').value)
-            except (RuntimeError, AttributeError):
-                dx, dy = 0.0, 0.0
+        #if self._odom_pub is not None and self._odom_pub.is_activated:
+         #   try:
+          #      dx, dy = self._sensor.get_motion(timeout=self.get_parameter('sensor_timeout').value)
+           # except (RuntimeError, AttributeError):
+            #    dx, dy = 0.0, 0.0
 
+        read_serial=ser.readline()
+	sensor_data = read_serial.split()
+	#s[0] = str((ser.readline(),16))
+	#print(s[0])
+	#print(x)
+	#print(sensor_data)
+	if len(sensor_data) > 1:	
+		delta_x = sensor_data[0].decode()
+		#print(delta_x)
+		delta_y = sensor_data[1].decode()
+		if (len(delta_x) == 1):
+			delta_x_int = int(delta_x)
+		elif (delta_x[1:].isnumeric() == 1):
+			delta_x_int = int(delta_x)
+		else:
+			delta_x_int = 0
+			
+		if (len(delta_x) == 1):
+			delta_y_int = int(delta_y)
+		elif (delta_x[1:].isnumeric() == 1):
+			delta_y_int = int(delta_y)
+		else:
+			delta_y_int = 0	
+
+        dx = delta_x_int
+        dy = delta_y_int
+            
             fov = np.radians(FOV_DEV)
             cf = self._pos_z*2*np.tan(fov/2)/(RES_PIX*self._scaler)
 
