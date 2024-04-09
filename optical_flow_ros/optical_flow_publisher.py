@@ -33,7 +33,7 @@ FOV_DEG = 42.0
 RES_PIX = 35
 
 class OpticalFlowPublisher(Node):
-    def __init__(self, node_name='optical_flow'):
+    def __init__(self, node_name='optical_flow_ros'):
         super().__init__(node_name)
         self._odom_pub: Optional[Publisher] = None
         self._tf_broadcaster: Optional[TransformBroadcaster] = None
