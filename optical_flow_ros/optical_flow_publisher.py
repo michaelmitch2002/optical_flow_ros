@@ -24,7 +24,6 @@ from tf2_ros import TransformBroadcaster
 from std_msgs.msg import Header
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import PoseWithCovariance, TwistWithCovariance, Pose, Twist, Point, Quaternion, Vector3, TransformStamped, Transform
-from pmw3901 import PMW3901, PAA5100, BG_CS_FRONT_BCM, BG_CS_BACK_BCM
 import serial
 
 ser = serial.Serial('/dev/ttyACM0',9600)
@@ -50,12 +49,12 @@ class OpticalFlowPublisher(Node):
                 ('x_init', 0.0),
                 ('y_init', 0.0),
                 ('z_height', 0.025),
-                ('board', 'paa5100'),
+                ('board', 'pmw3901'),
                 ('scaler', 5),
                 ('spi_nr', 0),
                 ('spi_slot', 'front'),
                 ('rotation', 0),
-                ('publish_tf', True),
+                ('publish_tf', False),
             ]
         )
         
@@ -144,57 +143,6 @@ class OpticalFlowPublisher(Node):
                                                                 z=odom_msg.pose.pose.position.z)),
                 )
                 self._tf_broadcaster.sendTransform(tf_msg)
-
-    def on_configure(self, state: State) -> TransitionCallbackReturn:
-        sensor_classes = {'pwm3901': PMW3901, 'paa5100': PAA5100}
-        SensorClass = sensor_classes.get(self.get_parameter('board').value)
-
-        if SensorClass is not None:
-            spi_slots = {'front': BG_CS_FRONT_BCM, 'back': BG_CS_BACK_BCM}
-            self._sensor = SensorClass(spi_port=self.get_parameter('spi_nr').value, 
-                                        spi_cs_gpio=spi_slots.get(self.get_parameter('spi_slot').value))
-            self._sensor.set_rotation(self.get_parameter('rotation').value)
-
-            if self._sensor is not None:
-                self._odom_pub = self.create_lifecycle_publisher(Odometry, 'odom', qos_profile=qos_profile_sensor_data)
-                self._tf_broadcaster = TransformBroadcaster(self)
-                self._timer = self.create_timer(self._dt, self.publish_odom)
-            
-                self.get_logger().info('Configured')
-                return TransitionCallbackReturn.SUCCESS
-            else:
-                self.get_logger().info('Configuration Failure: Invalid SPI Settings')
-                return TransitionCallbackReturn.FAILURE
-        else:
-            self.get_logger().info('Configuration Failure: Invalid Sensor')
-            return TransitionCallbackReturn.FAILURE
-
-    def on_activate(self, state: State) -> TransitionCallbackReturn:
-        self.get_logger().info('Activated')
-        return super().on_activate(state)
-
-    def on_deactivate(self, state: State) -> TransitionCallbackReturn:
-        self.get_logger().info('Deactivated')
-        return super().on_deactivate(state)
-
-    def on_cleanup(self, state: State) -> TransitionCallbackReturn:
-        self.terminate()
-        self.get_logger().info('Clean Up Successful')
-        return TransitionCallbackReturn.SUCCESS
-
-    def on_shutdown(self, state: State) -> TransitionCallbackReturn:
-        self.terminate()
-        self.get_logger().info('Shut Down Successful')
-        return TransitionCallbackReturn.SUCCESS
-        
-    def terminate(self):
-        if self._timer is not None:
-            self._timer.cancel()
-            self.destroy_timer(self._timer)
-        if self._odom_pub is not None:
-            self.destroy_publisher(self._odom_pub)
-        if self._tf_broadcaster is not None:
-            del self._tf_broadcaster
 
 def main(args=None):
     rclpy.init(args=args)
